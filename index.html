@@ -10,6 +10,10 @@
     .config {position:absolute}
     .config label {display: inline-block; min-width: 200px;}
     .config input {display: block; min-width: 200px;}
+
+    .loadmodel {position:absolute}
+    .loadmodel label {display: inline-block; min-width: 200px;}
+    .loadmodel input {display: block; min-width: 200px;}
   </style>
   <script type="importmap">
     {
@@ -47,6 +51,11 @@
     <label for="movespeed" data-template="movespeed:%NUM%">movespeed:0.01</label>
     <input id="movespeed" type="range" value="0.001" step="0.001" min="0.001" max="0.1" oninput="updateLabel(this)">
     <br>
+  </div>
+  <div class="loadmodel">
+    <label for="modelList">Model List</label>
+    <div id="modelList"></div>
+    <div id="loadedModel"></div>
   </div>
   <div id="coords" style="
     position: absolute;
