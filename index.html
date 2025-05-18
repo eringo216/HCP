@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Head-Coupled Perspective Demo</title>
+  <style>
+    body { margin: 0 ;overflow: hidden; color: white}
+    canvas { display: block }
+    #video { display: none }
+    .config {position:absolute}
+    .config label {display: inline-block; min-width: 200px;}
+    .config input {display: block; min-width: 200px;}
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+      }
+    }
+   </script>
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r17/Stats.min.js"></script>
+</head>
+<body>
+  <video id="video" autoplay muted playsinline></video>
+  <div class="config">
+    <label for="screenHeight" data-template="screenHeight:%NUM%m">screenHeight:1m</label>
+    <input id="screenHeight" type="range" value="1" step="0.01" min="0.1" max="5" oninput="updateLabel(this)">
+    <br>
+    <label for="amplifier" data-template="amplifier:%NUM%">amplifier:4</label>
+    <input id="amplifier" type="range" value="4" step="0.1" min="0.1" max="10" oninput="updateLabel(this)">
+    <br>
+    <label for="eyexoffset" data-template="eyexoffset:%NUM%">eyexoffset:0</label>
+    <input id="eyexoffset" type="range" value="0" step="0.1" min="-5" max="5" oninput="updateLabel(this)">
+    <br>
+    <label for="eyeyoffset" data-template="eyeyoffset:%NUM%">eyeyoffset:0</label>
+    <input id="eyeyoffset" type="range" value="0" step="0.1" min="-5" max="5" oninput="updateLabel(this)">
+    <br>
+    <label for="fov" data-template="fov:%NUM%">fov:40</label>
+    <input id="fov" type="range" value="40" step="1" min="10" max="150" oninput="updateLabel(this)">
+    <br>
+    <label for="lerpfactor" data-template="lerpfactor:%NUM%">lerpfactor:0.2</label>
+    <input id="lerpfactor" type="range" value="0.2" step="0.01" min="0.01" max="1" oninput="updateLabel(this)">
+    <br>
+    <label for="movespeed" data-template="movespeed:%NUM%">movespeed:0.01</label>
+    <input id="movespeed" type="range" value="0.001" step="0.001" min="0.001" max="0.1" oninput="updateLabel(this)">
+    <br>
+  </div>
+  <div id="coords" style="
+    position: absolute;
+    top: 4em;
+    left: auto;
+    right: 0;
+    color: white;
+    padding: 4px 8px;
+    font-family: monospace;
+    z-index: 1000;
+  ">x:0 y:0 z:0<br>headX:0 headY:0 headZ:0</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
