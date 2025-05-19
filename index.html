@@ -8,11 +8,21 @@
     canvas { display: block }
     #video { display: none }
     .config {position:absolute}
-    .config label {display: inline-block; min-width: 200px;}
+    label {
+      display: inline-block;
+      min-width: 200px;
+      font-size: 1.2em;
+      color: white; /* 文字色 */
+      text-shadow:
+        -1px -1px 0 black,
+        1px -1px 0 black,
+        -1px 1px 0 black,
+        1px 1px 0 black;
+    }
+
     .config input {display: block; min-width: 200px;}
 
-    .loadmodel {position:absolute}
-    .loadmodel label {display: inline-block; min-width: 200px;}
+    .loadmodel {position:absolute; bottom:0}
     .loadmodel input {display: block; min-width: 200px;}
   </style>
   <script type="importmap">
@@ -26,15 +36,18 @@
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r17/Stats.min.js"></script>
+   <script src="https://unpkg.com/three@0.176.0/examples/jsm/libs/ammo.wasm.js"></script>
+
+
 </head>
 <body>
   <video id="video" autoplay muted playsinline></video>
   <div class="config">
-    <label for="screenHeight" data-template="screenHeight:%NUM%m">screenHeight:1m</label>
-    <input id="screenHeight" type="range" value="1" step="0.01" min="0.1" max="5" oninput="updateLabel(this)">
+    <label for="screenHeight" data-template="screenHeight:%NUM%m">screenHeight:2m</label>
+    <input id="screenHeight" type="range" value="2" step="0.01" min="0.1" max="5" oninput="updateLabel(this)">
     <br>
     <label for="amplifier" data-template="amplifier:%NUM%">amplifier:4</label>
-    <input id="amplifier" type="range" value="4" step="0.1" min="0.1" max="10" oninput="updateLabel(this)">
+    <input id="amplifier" type="range" value="4" step="0.1" min="0.1" max="20" oninput="updateLabel(this)">
     <br>
     <label for="eyexoffset" data-template="eyexoffset:%NUM%">eyexoffset:0</label>
     <input id="eyexoffset" type="range" value="0" step="0.1" min="-5" max="5" oninput="updateLabel(this)">

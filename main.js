@@ -5,18 +5,14 @@ import {
 import {
 	MTLLoader
 } from 'three/addons/loaders/MTLLoader.js';
-import {
-	MMDLoader
-} from 'three/examples/jsm/loaders/MMDLoader.js';
-import {
-	MMDAnimationHelper
-} from 'three/examples/jsm/animation/MMDAnimationHelper.js';
+import { MMDLoader } from 'https://esm.sh/three-stdlib@2.22.0/loaders/MMDLoader';
+import { MMDAnimationHelper } from 'https://esm.sh/three-stdlib@2.22.0/animation/MMDAnimationHelper.js';
 import Stats from 'https://cdnjs.cloudflare.com/ajax/libs/stats.js/r17/Stats.min.js';
 
 const scene = new THREE.Scene();
 let videoWidth = 0;
 let videoHeight = 0;
-let windowposition = new THREE.Vector3(0, 0, 1)
+let windowposition = new THREE.Vector3(0, 1, 1)
 let cameraDirection;
 let headX = 0;
 let headY = 0;
@@ -35,6 +31,11 @@ const targetPos = new THREE.Vector3()
 const modelListDiv = document.getElementById("modelList");
 const loadedModelDiv = document.getElementById("loadedModel");
 
+Ammo().then(function (AmmoLib) {
+    Ammo = AmmoLib;
+    animate();
+});
+
 function updateLabel(el) {
 	const label = document.querySelector(`label[for="${el.id}"]`);
 	if (label) {
@@ -47,7 +48,7 @@ function updateLabel(el) {
 }
 window.updateLabel = updateLabel;
 
-function loadModel(path, scale) {
+function loadModel(path, scale, vmdFiles = []) {
 	const extension = path.split('.').pop().toLowerCase();
 
 	if (extension === 'obj') {
@@ -66,17 +67,67 @@ function loadModel(path, scale) {
 		});
 
 	} else if (extension === 'pmx' || extension === 'pmd') {
-		const mmdLoader = new MMDLoader();
-		mmdLoader.load(path, (mesh) => {
-			mesh.scale.set(scale, scale, scale);
+		const loader = new MMDLoader();
+		const helper = new MMDAnimationHelper();
+
+		loader.loadModel(path, (mesh) => {
+			// 色調整
+			if (Array.isArray(mesh.material)) {
+				for (const material of mesh.material) {
+					if (material.emissive) material.emissive.set(0x000000);
+				}
+			} else if (mesh.material?.emissive) {
+				mesh.material.emissive.set(0x000000);
+			}
+
+            var model = new THREE.Object3D();
+            // Scaleの変換
+
+            model.scale.set(scale, scale, scale)
+            model.add(mesh);
+
+            helper.add(mesh, {
+                //animation: mmd.animation,
+                physics: true,
+            });
+            
+            //marker.add(model);
+
 			scene.add(mesh);
+
+
+			if (vmdFiles.length > 0) {
+				let vmdIndex = 0;
+
+				const loadVmd = () => {
+					const vmdFile = vmdFiles[vmdIndex].file;
+					loader.loadVmd(vmdFile, (vmd) => {
+						loader.createAnimation(mesh, vmd, vmdFiles[vmdIndex].name);
+						vmdIndex++;
+
+						if (vmdIndex < vmdFiles.length) {
+							loadVmd();
+						} else {
+							helper.setAnimation(mesh);
+							if (mesh.mixer) mesh.mixer.stopAllAction(); // 一時停止
+							helper.setPhysics(mesh);
+							helper.unifyAnimationDuration({ afterglow: 1.0 });
+
+							console.log('アニメ数:', mesh.geometry?.animations?.length ?? '不明');
+						}
+					});
+				};
+
+				loadVmd();
+			}
 		});
 	} else {
 		console.warn('未対応のモデル形式:', extension);
 	}
 }
 
-function LoadMMDModelList() {
+
+function loadMMDModelList() {
 	fetch("https://mmd-model.netlify.app/public/models/models.json")
 		.then(res => {
 			if (!res.ok) throw new Error("ネットワークエラー: " + res.status);
@@ -106,7 +157,7 @@ function LoadMMDModelList() {
 				panel.appendChild(panelContent);
 
 				btn.addEventListener("click", () => {
-
+                    loadModel("https://mmd-model.netlify.app/public" + Path, 0.1)
 
 					btn.classList.toggle("active");
 					if (panel.style.maxHeight) {
@@ -125,7 +176,7 @@ function LoadMMDModelList() {
 			modelListDiv.textContent = "モデルの読み込みに失敗しました: " + err.message;
 		});
 }
-LoadMMDModelList()
+loadMMDModelList()
 
 const camera = new THREE.PerspectiveCamera(
 	40,
@@ -139,7 +190,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 const formValues = {
 
-	"screenHeight": 1.0,
+	"screenHeight": 2.0,
 	"amplifier": 4.0,
 	"eyexoffset": 0,
 	"eyeyoffset": 0,
@@ -158,17 +209,16 @@ stats.dom.style.left = "auto";
 
 const focalLength = 1738; // 焦点距離（ピクセル）
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor( 0x666666, 1.0 );
 document.body.appendChild(renderer.domElement);
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshNormalMaterial();
-const light = new THREE.PointLight(0xffffff, 1);
-light.position.set(0, 0.66, 0.5).normalize();
-const ambientLight = new THREE.AmbientLight(0x888888);
-scene.add(ambientLight);
-scene.add(light);
+//const light = new THREE.PointLight(0xffffff, 1);
+//light.position.set(0, 0.66, 0.5).normalize();
+const directionalLight = new THREE.DirectionalLight('#ffffff', 1);
+directionalLight.position.set( -20, 20, 20 );
+scene.add(directionalLight);
+//scene.add(light);
 const gridHelper = new THREE.GridHelper(10, 10);
 scene.add(gridHelper);
-const cube = new THREE.Mesh(geometry, material);
 
 // Off-axis projection setup
 function updateOffAxisProjection(headX, headY, headZ) {
@@ -183,14 +233,6 @@ function updateOffAxisProjection(headX, headY, headZ) {
 
 	const distanceToNearPlane = screenHeight / (2 * Math.tan(fovRad / 2)) + headZ;
 
-	const cameraPosition = new THREE.Vector3(
-		windowposition.x,
-		windowposition.y,
-		windowposition.z
-	).sub(cameraDirection.clone().multiplyScalar(distanceToNearPlane));
-
-	camera.position.copy(cameraPosition);
-
 	// near平面の縦横サイズ
 	const halfHeight = screenHeight / 2;
 	const halfWidth = halfHeight * aspect;
@@ -201,6 +243,10 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	const trueUp = new THREE.Vector3().crossVectors(right, cameraDirection).normalize();
 	const headOffset = right.clone().multiplyScalar(headX).add(trueUp.clone().multiplyScalar(headY));
 
+    const cameraPosition = windowposition.clone()
+		.add(headOffset)
+        .sub(cameraDirection.clone().multiplyScalar(distanceToNearPlane));
+
 	// near平面の四隅を計算（windowposition を中心とする）
 	const topLeft = new THREE.Vector3(
 			windowposition.x,
@@ -208,7 +254,6 @@ function updateOffAxisProjection(headX, headY, headZ) {
 			windowposition.z
 		).add(trueUp.clone().multiplyScalar(halfHeight))
 		.sub(right.clone().multiplyScalar(halfWidth))
-		.sub(headOffset);
 
 	const topRight = new THREE.Vector3(
 			windowposition.x,
@@ -216,7 +261,6 @@ function updateOffAxisProjection(headX, headY, headZ) {
 			windowposition.z
 		).add(trueUp.clone().multiplyScalar(halfHeight))
 		.add(right.clone().multiplyScalar(halfWidth))
-		.sub(headOffset);
 
 	const bottomLeft = new THREE.Vector3(
 			windowposition.x,
@@ -224,12 +268,12 @@ function updateOffAxisProjection(headX, headY, headZ) {
 			windowposition.z
 		).sub(trueUp.clone().multiplyScalar(halfHeight))
 		.sub(right.clone().multiplyScalar(halfWidth))
-		.sub(headOffset);
 
 	// カメラから各隅へのベクトル
 	const tl = topLeft.clone().sub(cameraPosition);
 	const tr = topRight.clone().sub(cameraPosition);
 	const bl = bottomLeft.clone().sub(cameraPosition);
+    //console.log("↖" + tl.toArray(),"↗"+ tr.toArray(),"↙" + bl.toArray())
 
 	// near距離
 	const near = tl.dot(cameraDirection);
@@ -245,7 +289,7 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	const bottomFrustum = bl.dot(trueUp);
 	const topFrustum = tl.dot(trueUp);
 
-	//console.log(`Frustum: left=${leftFrustum(2)}, right=${rightFrustum.toFixed(2)}, top=${topFrustum.toFixed(2)}, bottom=${bottomFrustum.toFixed(2)}`);
+	//console.log(`Frustum: left=${leftFrustum.toFixed(2)}, right=${rightFrustum.toFixed(2)}, top=${topFrustum.toFixed(2)}, bottom=${bottomFrustum.toFixed(2)}`);
 
 	// 投影行列を作成
 	const projectionMatrix = new THREE.Matrix4();
@@ -259,7 +303,8 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	);
 	camera.projectionMatrix = projectionMatrix;
 	camera.projectionMatrixInverse = projectionMatrix.clone().invert();
-	camera.position.set(headX + windowposition.x, headY + windowposition.y, windowposition.z + near)
+    camera.position.copy(cameraPosition);
+	//camera.position.set(headX + windowposition.x, headY + windowposition.y, windowposition.z + near)
 }
 
 // MediaPipe FaceMesh setup
@@ -313,7 +358,7 @@ faceMesh.onResults((results) => {
 		// headX, headY, headZを実世界の距離（メートル）で設定
 		headX = -realX * formValues["amplifier"];
 		headY = -realY * formValues["amplifier"];
-		headZ = distance * formValues["amplifier"];
+		headZ = distance - near * formValues["amplifier"];
 
 		//console.log(`Head: x=${headX.toFixed(2)}, y=${headY.toFixed(2)}, z=${headZ.toFixed(2)}`);
 	}
@@ -468,9 +513,6 @@ function animate() {
 	renderer.render(scene, camera);
 	stats.end();
 }
-animate();
-loadModel("./obj/znd/znd", 0.2);
-loadModel("./obj/sakuya/sakuya", 0.5);
 //loadModel("./obj/apple/ringo", 0.5);
 
 // Resize handling
