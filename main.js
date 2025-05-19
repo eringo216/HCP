@@ -18,6 +18,7 @@ let headX = 0;
 let headY = 0;
 let headZ = 0;
 let near = 0;
+let clock = new THREE.Clock();
 let isLeftDragging = false;
 let isRightDragging = false;
 let previousMousePosition = {
@@ -31,10 +32,7 @@ const targetPos = new THREE.Vector3()
 const modelListDiv = document.getElementById("modelList");
 const loadedModelDiv = document.getElementById("loadedModel");
 
-Ammo().then(function (AmmoLib) {
-    Ammo = AmmoLib;
-    animate();
-});
+Ammo = await Ammo();
 
 function updateLabel(el) {
 	const label = document.querySelector(`label[for="${el.id}"]`);
@@ -66,64 +64,74 @@ function loadModel(path, scale, vmdFiles = []) {
 			});
 		});
 
-	} else if (extension === 'pmx' || extension === 'pmd') {
-		const loader = new MMDLoader();
-		const helper = new MMDAnimationHelper();
+    }
 
-		loader.loadModel(path, (mesh) => {
-			// 色調整
-			if (Array.isArray(mesh.material)) {
-				for (const material of mesh.material) {
-					if (material.emissive) material.emissive.set(0x000000);
-				}
-			} else if (mesh.material?.emissive) {
-				mesh.material.emissive.set(0x000000);
-			}
+    return new Promise ((resolve,reject) => {
+        if (extension === 'pmx' || extension === 'pmd') {
+            const loader = new MMDLoader();
+            const helper = new MMDAnimationHelper();
 
-            var model = new THREE.Object3D();
-            // Scaleの変換
+            loader.load(path, (mesh) => {
+                // 色調整
+                mesh.castShadow = true; //影を落とすオブジェクト
+                mesh.receiveShadow = true;
+                if (Array.isArray(mesh.material)) {
+                    for (const material of mesh.material) {
+                        if (material.emissive) material.emissive.set(0x000000);
+                    }
+                } else if (mesh.material?.emissive) {
+                    mesh.material.emissive.set(0x000000);
+                }
 
-            model.scale.set(scale, scale, scale)
-            model.add(mesh);
+                // Scaleの変換
+                
+                //mesh.scale.set(scale,scale,scale)
 
-            helper.add(mesh, {
-                //animation: mmd.animation,
-                physics: true,
-            });
+                helper.add(mesh, {
+                    //animation: mmd.animation,
+                    physics: true,
+                });
+
+                mesh.scale.set(scale,scale,scale)
+
+                const model = new THREE.Object3D();
+				model.add(mesh);
+				scene.add(model);
+
+
+                if (vmdFiles.length > 0) {
+                    let vmdIndex = 0;
+
+                    const loadVmd = () => {
+                        const vmdFile = vmdFiles[vmdIndex].file;
+                        loader.loadVmd(vmdFile, (vmd) => {
+                            loader.createAnimation(mesh, vmd, vmdFiles[vmdIndex].name);
+                            vmdIndex++;
+
+                            if (vmdIndex < vmdFiles.length) {
+                                loadVmd();
+                            } else {
+                                helper.setAnimation(mesh);
+                                if (mesh.mixer) mesh.mixer.stopAllAction(); // 一時停止
+                                helper.setPhysics(mesh);
+                                helper.unifyAnimationDuration({ afterglow: 1.0 });
+
+                                console.log('アニメ数:', mesh.geometry?.animations?.length ?? '不明');
+                            }
+                        });
+                    };
+
+                    loadVmd();
+                }
+
+                resolve({ model, mesh, helper });
+            }, undefined, reject);
             
-            //marker.add(model);
 
-			scene.add(mesh);
-
-
-			if (vmdFiles.length > 0) {
-				let vmdIndex = 0;
-
-				const loadVmd = () => {
-					const vmdFile = vmdFiles[vmdIndex].file;
-					loader.loadVmd(vmdFile, (vmd) => {
-						loader.createAnimation(mesh, vmd, vmdFiles[vmdIndex].name);
-						vmdIndex++;
-
-						if (vmdIndex < vmdFiles.length) {
-							loadVmd();
-						} else {
-							helper.setAnimation(mesh);
-							if (mesh.mixer) mesh.mixer.stopAllAction(); // 一時停止
-							helper.setPhysics(mesh);
-							helper.unifyAnimationDuration({ afterglow: 1.0 });
-
-							console.log('アニメ数:', mesh.geometry?.animations?.length ?? '不明');
-						}
-					});
-				};
-
-				loadVmd();
-			}
-		});
-	} else {
-		console.warn('未対応のモデル形式:', extension);
-	}
+        } else {
+            reject('未対応のモデル形式:', extension);
+        }
+    })
 }
 
 
@@ -147,29 +155,23 @@ function loadMMDModelList() {
 			}) => {
 				const btn = document.createElement("button");
 				btn.className = "accordion";
-				btn.textContent = name;
-
-				const panel = document.createElement("div");
-				panel.className = "panel";
-				const panelContent = document.createElement("div");
-				panelContent.className = "panel-content";
-				panelContent.textContent = Path;
-				panel.appendChild(panelContent);
+				btn.textContent = Path;
 
 				btn.addEventListener("click", () => {
-                    loadModel("https://mmd-model.netlify.app/public" + Path, 0.1)
-
-					btn.classList.toggle("active");
-					if (panel.style.maxHeight) {
-						panel.style.maxHeight = null;
-					} else {
-						panel.style.maxHeight = panel.scrollHeight + "px";
-					}
-					loadedModelDiv.textContent = `${name}`;
+                    loadModel("https://mmd-model.netlify.app/public/models/" + Path, 0.1).then(({ model, mesh, helper }) => {
+                        btn.classList.toggle("active");
+                        const loadedModelbtn = document.createElement("button")
+                        loadedModelbtn.textContent = name
+                        loadedModelbtn.addEventListener("click", () => {
+                            scene.remove(model)
+                            helper.remove(mesh)
+                            loadedModelbtn.remove();
+                        })
+                        loadedModelDiv.appendChild(loadedModelbtn)
+                    })
 				});
 
 				modelListDiv.appendChild(btn);
-				modelListDiv.appendChild(panel);
 			});
 		})
 		.catch(err => {
@@ -211,11 +213,25 @@ const focalLength = 1738; // 焦点距離（ピクセル）
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor( 0x666666, 1.0 );
 document.body.appendChild(renderer.domElement);
-//const light = new THREE.PointLight(0xffffff, 1);
-//light.position.set(0, 0.66, 0.5).normalize();
+var ambient = new THREE.AmbientLight( 0x666666 );
+scene.add( ambient );
 const directionalLight = new THREE.DirectionalLight('#ffffff', 1);
-directionalLight.position.set( -20, 20, 20 );
+directionalLight.position.set(-15, 15, 15);
 scene.add(directionalLight);
+// Shadow parameters
+renderer.shadowMap.enabled = true;
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.x = 1024;
+directionalLight.shadow.mapSize.y = 1024;
+directionalLight.shadow.camera.right = 20;
+directionalLight.shadow.camera.top = 20;
+directionalLight.shadow.camera.left = -20;
+directionalLight.shadow.camera.bottom = -20;
+
+// Model specific Shadow parameters
+renderer.shadowMap.renderSingleSided = false;
+renderer.shadowMap.renderReverseSided = false;
+directionalLight.shadow.bias = -0.001;
 //scene.add(light);
 const gridHelper = new THREE.GridHelper(10, 10);
 scene.add(gridHelper);
@@ -513,6 +529,7 @@ function animate() {
 	renderer.render(scene, camera);
 	stats.end();
 }
+animate()
 //loadModel("./obj/apple/ringo", 0.5);
 
 // Resize handling
