@@ -5,8 +5,9 @@ import {
 import {
 	MTLLoader
 } from 'three/addons/loaders/MTLLoader.js';
-import { MMDLoader } from 'https://esm.sh/three-stdlib@2.22.0/loaders/MMDLoader';
-import { MMDAnimationHelper } from 'https://esm.sh/three-stdlib@2.22.0/animation/MMDAnimationHelper.js';
+import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
+import { MMDAnimationHelper } from 'three/addons/animation/MMDAnimationHelper.js';
+import { MMDParser } from 'three/addons/libs/mmdparser.module.js';
 import Stats from 'https://cdnjs.cloudflare.com/ajax/libs/stats.js/r17/Stats.min.js';
 
 const scene = new THREE.Scene();
@@ -223,10 +224,10 @@ renderer.shadowMap.enabled = true;
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.x = 1024;
 directionalLight.shadow.mapSize.y = 1024;
-directionalLight.shadow.camera.right = 20;
-directionalLight.shadow.camera.top = 20;
-directionalLight.shadow.camera.left = -20;
-directionalLight.shadow.camera.bottom = -20;
+directionalLight.shadow.camera.right = 2;
+directionalLight.shadow.camera.top = 2;
+directionalLight.shadow.camera.left = -2;
+directionalLight.shadow.camera.bottom = -2;
 
 // Model specific Shadow parameters
 renderer.shadowMap.renderSingleSided = false;
@@ -446,7 +447,7 @@ window.addEventListener("wheel", (event) => {
 });
 
 // マウス移動時（ドラッグ中）
-document.querySelector('canvas[data-engine = "three.js r176"]').addEventListener("mousemove", (event) => {
+document.querySelector('canvas[data-engine = "three.js r158"]').addEventListener("mousemove", (event) => {
 	const deltaX = event.clientX - previousMousePosition.x;
 	const deltaY = event.clientY - previousMousePosition.y;
 

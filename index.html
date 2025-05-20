@@ -24,19 +24,21 @@
 
     .loadmodel {position:absolute; bottom:0}
     .loadmodel input {display: block; min-width: 200px;}
+
+    .modelList {overflow-y:scroll; max-width: 500px; max-height: 200px;}
   </style>
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
       }
     }
    </script>
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r17/Stats.min.js"></script>
-   <script src="https://unpkg.com/three@0.176.0/examples/jsm/libs/ammo.wasm.js"></script>
+   <script src="https://unpkg.com/three@0.158.0/examples/jsm/libs/ammo.wasm.js"></script>
 
 
 </head>
@@ -68,6 +70,7 @@
   <div class="loadmodel">
     <label for="modelList">Model List</label>
     <div id="modelList"></div>
+    <label for="modelList">loaded Model</label>
     <div id="loadedModel"></div>
   </div>
   <div id="coords" style="
