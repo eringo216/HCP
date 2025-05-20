@@ -205,7 +205,7 @@ const formValues = {
 window.formValues = formValues;
 const stats = new Stats();
 stats.showPanel(0); // 0: fps, 1: ms, 2: mb
-document.getElementById("debug").appendChild(stats.dom);
+document.body.appendChild(stats.dom);
 stats.dom.style.position = "fixed";
 stats.dom.style.right = "0px";
 stats.dom.style.left = "auto";
@@ -236,9 +236,6 @@ directionalLight.shadow.bias = -0.001;
 //scene.add(light);
 const gridHelper = new THREE.GridHelper(10, 10);
 scene.add(gridHelper);
-const helper = new THREE.CameraHelper(camera);
-//scene.add(helper);
-
 
 // Off-axis projection setup
 function updateOffAxisProjection(headX, headY, headZ) {
@@ -246,41 +243,47 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	const far = camera.far;
 	const fovRad = THREE.MathUtils.degToRad(formValues["fov"]);
 	const screenHeight = formValues["screenHeight"];
-    const near = 0.1;
 
 	// カメラの向き（前方向）を取得
 	const cameraDirection = new THREE.Vector3();
 	camera.getWorldDirection(cameraDirection);
-    const distanceToVirtualWindow = screenHeight / (2 * Math.tan(fovRad / 2)) + headZ;
-  
+
+	const distanceToNearPlane = screenHeight / (2 * Math.tan(fovRad / 2)) + headZ;
+
+	// near平面の縦横サイズ
+	const halfHeight = screenHeight / 2;
+	const halfWidth = halfHeight * aspect;
+
 	// 平面の横（right）・縦（up）ベクトル
 	const up = new THREE.Vector3(0, 1, 0);
 	const right = new THREE.Vector3().crossVectors(cameraDirection, up).normalize();
 	const trueUp = new THREE.Vector3().crossVectors(right, cameraDirection).normalize();
-    const headOffset = right.clone().multiplyScalar(headX).add(trueUp.clone().multiplyScalar(headY));
+	const headOffset = right.clone().multiplyScalar(headX).add(trueUp.clone().multiplyScalar(headY));
 
     const cameraPosition = windowposition.clone()
 		.add(headOffset)
-        .sub(cameraDirection.clone().multiplyScalar(distanceToVirtualWindow));
-
-    const nearPosition = cameraPosition.clone()
-        .add(cameraDirection.clone().multiplyScalar(near));
-
-
-	const nearBairitu = (near / distanceToVirtualWindow)
-	const halfHeight = screenHeight / 2;
-	const halfWidth = halfHeight * aspect;
-	const nearHeight = nearBairitu * (screenHeight / 2);
-	const nearWidth = nearHeight * aspect;
+        .sub(cameraDirection.clone().multiplyScalar(distanceToNearPlane));
 
 	// near平面の四隅を計算（windowposition を中心とする）
-	const topLeft = windowposition.clone().add(trueUp.clone().multiplyScalar(halfHeight))
+	const topLeft = new THREE.Vector3(
+			windowposition.x,
+			windowposition.y,
+			windowposition.z
+		).add(trueUp.clone().multiplyScalar(halfHeight))
 		.sub(right.clone().multiplyScalar(halfWidth))
 
-	const topRight = windowposition.clone().add(trueUp.clone().multiplyScalar(halfHeight))
+	const topRight = new THREE.Vector3(
+			windowposition.x,
+			windowposition.y,
+			windowposition.z
+		).add(trueUp.clone().multiplyScalar(halfHeight))
 		.add(right.clone().multiplyScalar(halfWidth))
 
-	const bottomLeft = windowposition.clone().sub(trueUp.clone().multiplyScalar(halfHeight))
+	const bottomLeft = new THREE.Vector3(
+			windowposition.x,
+			windowposition.y,
+			windowposition.z
+		).sub(trueUp.clone().multiplyScalar(halfHeight))
 		.sub(right.clone().multiplyScalar(halfWidth))
 
 	// カメラから各隅へのベクトル
@@ -289,6 +292,8 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	const bl = bottomLeft.clone().sub(cameraPosition);
     //console.log("↖" + tl.toArray(),"↗"+ tr.toArray(),"↙" + bl.toArray())
 
+	// near距離
+	const near = tl.dot(cameraDirection);
 	//console.log("適切な near = " + near);
 	if (near <= 0) {
 		console.warn("カメラが箱の後ろにあります。Near planeを調整してください。");
@@ -296,12 +301,12 @@ function updateOffAxisProjection(headX, headY, headZ) {
 	}
 
 	// フラスタムの計算
-	const leftFrustum = tl.dot(right) * nearBairitu;
-	const rightFrustum = tr.dot(right) * nearBairitu;
-	const bottomFrustum = bl.dot(trueUp) * nearBairitu;
-	const topFrustum = tl.dot(trueUp) * nearBairitu;
+	const leftFrustum = tl.dot(right);
+	const rightFrustum = tr.dot(right);
+	const bottomFrustum = bl.dot(trueUp);
+	const topFrustum = tl.dot(trueUp);
 
-	//console.log(`Frustum: left=${leftFrustum.toFixed(6)}, right=${rightFrustum.toFixed(6)}, top=${topFrustum.toFixed(6)}, bottom=${bottomFrustum.toFixed(6)}`);
+	//console.log(`Frustum: left=${leftFrustum.toFixed(2)}, right=${rightFrustum.toFixed(2)}, top=${topFrustum.toFixed(2)}, bottom=${bottomFrustum.toFixed(2)}`);
 
 	// 投影行列を作成
 	const projectionMatrix = new THREE.Matrix4();
