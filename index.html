@@ -34,6 +34,7 @@
 
     #loadmodel {position:absolute; bottom:0}
     #loadmodel input {display: block; min-width: 200px;}
+    #loadmotion {position:absolute; right: 0; bottom: 0;}
 
     #modelList {overflow-y:scroll; max-width: 500px; max-height: 200px;}
   </style>
@@ -85,8 +86,17 @@
     <div>
       <label for="modelList">Model List</label>
       <div id="modelList"></div>
-      <label for="loadedmodel">loaded Model</label>
+      <label for="loadedModel">loaded Model</label>
       <div id="loadedModel"></div>
+    </div>
+  </details>
+  <details class="GUI" id="loadmotion">
+    <summary>Motions</summary>
+    <div>
+      <label for="motionList">Motion List</label>
+      <div id="motionList"></div>
+      <label for="loadedMotion">loaded Motion</label>
+      <div id="loadedMotion"></div>
     </div>
   </details>
   <details class="GUI" id="debug">
