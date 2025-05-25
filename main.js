@@ -273,7 +273,8 @@ stats.dom.style.position = "fixed";
 stats.dom.style.right = "0px";
 stats.dom.style.left = "auto";
 
-const focalLength = 1738; // 焦点距離（ピクセル）
+var camSettings;
+var focalLength = 1738; // 焦点距離（ピクセル）
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x666666, 1.0);
 document.body.appendChild(renderer.domElement);
@@ -458,12 +459,13 @@ navigator.mediaDevices
 	})
 	.then((stream) => {
 		const track = stream.getVideoTracks()[0];
-		const settings = track.getSettings();
-		console.log("Camera settings:", settings);
+		camSettings = track.getSettings();
+		console.log("Camera settings:", camSettings);
 
 		// 取得できた解像度を使ってMediaPipeのCameraを初期化
-		videoWidth = settings.width || 640;
-		videoHeight = settings.height || 480;
+		videoWidth = camSettings.width || 640;
+		videoHeight = camSettings.height || 480;
+		focalLength = camSettings?.width || 1738;
 
 		const cameraMP = new Camera(videoElement, {
 			onFrame: async () => {
